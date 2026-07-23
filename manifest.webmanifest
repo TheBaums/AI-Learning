@@ -1,0 +1,12 @@
+{
+  "name": "Golf Bets",
+  "short_name": "Golf Bets",
+  "description": "Track golf betting games and payouts with your friends.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f1512",
+  "theme_color": "#1b7a3f",
+  "icons": [
+    { "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
