@@ -1,7 +1,7 @@
 // sw.js — minimal offline cache so the app keeps working on the course with no
 // signal. Bump CACHE when files change to force clients to pick up new assets.
 
-const CACHE = 'golf-bets-v2';
+const CACHE = 'golf-bets-v3';
 const ASSETS = [
   './',
   './index.html',

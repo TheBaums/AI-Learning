@@ -2,7 +2,7 @@
 // into a root element. A tiny hash router in app.js decides which one to show.
 
 import * as store from './storage.js';
-import { GAME_LIST, GAMES, combinedPayouts, pScore } from './games.js';
+import { GAME_LIST, GAMES, combinedPayouts, pScore, matchState } from './games.js';
 import { courseHandicap, strokesOnHole, settle } from './scoring.js';
 
 /* ----------------------------- DOM helpers ------------------------------- */
@@ -496,6 +496,11 @@ export function renderScorecard(root, params, rerender) {
     const bbbInst = round.games.find((g) => g.gameId === 'bbb');
     if (bbbInst) body.append(bbbControl(round, bbbInst, hole, save));
 
+    // Manual press button for match-play games (Nassau, Match Play).
+    for (const inst of round.games.filter((g) => GAMES[g.gameId]?.canPress)) {
+      body.append(matchControl(round, inst, hole, () => { save(); drawStandings(); }));
+    }
+
     drawStandings();
   }
 
@@ -584,6 +589,42 @@ function bbbControl(round, inst, hole, save) {
       }
       row.append(chips);
       wrap.append(row);
+    }
+  }
+  draw();
+  return wrap;
+}
+
+function matchControl(round, inst, hole, onChange) {
+  const game = GAMES[inst.gameId];
+  const [teamA, teamB] = inst.config.teams;
+  inst.config.presses = inst.config.presses || [];
+  const teamName = (ids) => ids.map((id) => round.players.find((p) => p.id === id)?.name).join(' & ');
+
+  const wrap = h('div', { class: 'match-control' });
+  function draw() {
+    wrap.innerHTML = '';
+    const { a, b } = matchState(round, inst, hole.number);
+    const lead = a === b ? 'All square' : `${teamName(a > b ? teamA : teamB)} ${Math.abs(a - b)} up`;
+    // Nassau presses run to the end of the current nine; Match Play runs to 18.
+    const to = inst.gameId === 'nassau' ? (hole.number <= 9 ? 9 : 18) : 18;
+
+    wrap.append(h('div', { class: 'muted small' }, `⚔️ ${game.name}: ${lead} thru ${hole.number}`));
+    wrap.append(h('button', {
+      class: 'btn press',
+      disabled: hole.number > to,
+      onclick: () => { inst.config.presses.push({ from: hole.number, to }); onChange(); draw(); },
+    }, `Press — new $${inst.config.value} bet, holes ${hole.number}–${to}`));
+
+    if (inst.config.presses.length) {
+      wrap.append(h('div', { class: 'press-list' }, inst.config.presses.map((pr, i) =>
+        h('div', { class: 'press-item' },
+          h('span', { class: 'small' }, `Press ${i + 1}: holes ${pr.from}–${pr.to}`),
+          h('button', {
+            class: 'icon-btn danger',
+            onclick: () => { inst.config.presses.splice(i, 1); onChange(); draw(); },
+          }, '✕'),
+        ))));
     }
   }
   draw();

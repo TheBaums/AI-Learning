@@ -142,6 +142,12 @@ table.grid input.tiny { width: 56px; }
 .bbb-row { margin-top: 10px; }
 .bbb-label { font-size: 13px; color: var(--muted); }
 
+.match-control { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.btn.press { margin-top: 8px; padding: 12px; font-size: 14px; background: var(--card-2); }
+.btn.press:disabled { opacity: .4; }
+.press-list { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+.press-item { display: flex; align-items: center; justify-content: space-between; color: var(--muted); }
+
 .sixes-info { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
 .sixes-teams { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
 .team-pill { flex: 1; text-align: center; padding: 8px; background: var(--card-2); border: 1px solid var(--line); border-radius: 10px; font-weight: 600; font-size: 14px; }

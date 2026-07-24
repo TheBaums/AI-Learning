@@ -276,6 +276,27 @@ function defaultTeams(players) {
   return [players.slice(0, half).map((p) => p.id), players.slice(half).map((p) => p.id)];
 }
 
+// A press is an extra match-play bet over a hole range, worth the same `value`.
+// The side that wins the most holes in the range wins the bet. Presses are
+// added manually during play and stored in cfg.presses = [{ from, to }].
+function applyPresses(round, cfg, payouts, net) {
+  const value = Number(cfg.value) || 0;
+  const [teamA, teamB] = cfg.teams;
+  for (const pr of cfg.presses || []) {
+    const { a, b } = matchTally(round, teamA, teamB, net, pr.from, pr.to);
+    if (a > b) { for (const id of teamA) payouts[id] += value; for (const id of teamB) payouts[id] -= value; }
+    else if (b > a) { for (const id of teamB) payouts[id] += value; for (const id of teamA) payouts[id] -= value; }
+  }
+}
+
+/** Match state (holes won by each side) through a given hole — used by the UI
+    to show the running match status and drive the Press button. */
+export function matchState(round, inst, throughHole = 18) {
+  const net = inst.config.mode === 'net';
+  const [teamA, teamB] = inst.config.teams;
+  return matchTally(round, teamA, teamB, net, 1, throughHole);
+}
+
 /* -------------------------------- Nassau ---------------------------------
    Front 9, back 9 and total 18 — three separate match-play bets. 1v1 or
    2v2 best ball. `value` is per player, per segment.                        */
@@ -286,8 +307,9 @@ const Nassau = {
   min: 2,
   max: 4,
   needsTeams: true,
+  canPress: true,
   description: 'Front 9, back 9 and overall — three separate match-play bets. 1v1 or 2v2 best ball.',
-  defaultConfig: (players) => ({ mode: 'net', value: 5, teams: defaultTeams(players) }),
+  defaultConfig: (players) => ({ mode: 'net', value: 5, teams: defaultTeams(players), presses: [] }),
   compute(round, cfg) {
     const net = cfg.mode === 'net';
     const value = Number(cfg.value) || 0;
@@ -315,6 +337,7 @@ const Nassau = {
         for (const id of losers) payouts[id] -= value;
       }
     }
+    applyPresses(round, cfg, payouts, net);
     return { payouts, holes, segs };
   },
 };
@@ -329,8 +352,9 @@ const MatchPlay = {
   min: 2,
   max: 4,
   needsTeams: true,
+  canPress: true,
   description: 'One head-to-head match over 18 holes — most holes won takes the pot. 1v1 or 2v2.',
-  defaultConfig: (players) => ({ mode: 'net', value: 10, teams: defaultTeams(players) }),
+  defaultConfig: (players) => ({ mode: 'net', value: 10, teams: defaultTeams(players), presses: [] }),
   compute(round, cfg) {
     const net = cfg.mode === 'net';
     const value = Number(cfg.value) || 0;
@@ -354,6 +378,7 @@ const MatchPlay = {
       for (const id of winners) payouts[id] += value;
       for (const id of losers) payouts[id] -= value;
     }
+    applyPresses(round, cfg, payouts, net);
     return { payouts, holes };
   },
 };

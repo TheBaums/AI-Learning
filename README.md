@@ -22,7 +22,9 @@ server, and it works **offline** on the course (it installs as a PWA).
     **low ball**, **low total**, or **both** (2 points/hole). The current
     6-hole pairing is shown right on the scorecard.
   - **Nassau** — front 9 / back 9 / total, match play, 1v1 or 2v2 best ball.
+    Tap **Press** on the scorecard to start a new bet from the current hole.
   - **Match Play** — a single head-to-head match, most holes won takes it.
+    Supports manual **presses** too.
   - **Vegas** — 2 teams; scores form a number (4 & 6 = 46), lower wins,
     difference × value. Birdies flip the opponent's number.
   - **Stableford / Quota** — points per hole vs par; most points wins the pot.
