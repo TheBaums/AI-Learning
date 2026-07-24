@@ -43,7 +43,7 @@ function money(n) {
 
 /* -------------------------------- Home ----------------------------------- */
 
-export function renderHome(root) {
+export function renderHome(root, _params, rerender) {
   const rounds = store.getRounds();
   root.append(
     h('header', { class: 'topbar hero' },
@@ -58,22 +58,26 @@ export function renderHome(root) {
       h('h2', { class: 'section' }, 'Recent rounds'),
       rounds.length === 0
         ? h('p', { class: 'muted' }, 'No rounds yet. Start one above.')
-        : h('div', { class: 'list' }, rounds.map((r) => roundCard(r))),
+        : h('div', { class: 'list' }, rounds.map((r) => roundCard(r, rerender))),
     ),
   );
 }
 
-function roundCard(r) {
+function roundCard(r, rerender) {
   const done = isRoundComplete(r);
-  return h('button', {
-    class: 'card link',
-    onclick: () => go(done ? `#/round/${r.id}/results` : `#/round/${r.id}`),
-  },
-    h('div', { class: 'card-main' },
+  return h('div', { class: 'card row' },
+    h('button', {
+      class: 'card-main link',
+      onclick: () => go(done ? `#/round/${r.id}/results` : `#/round/${r.id}`),
+    },
       h('strong', {}, r.courseName || 'Round'),
       h('span', { class: 'muted small' }, `${r.date} · ${r.players.map((p) => p.name).join(', ')}`),
     ),
     h('span', { class: `pill ${done ? 'done' : 'live'}` }, done ? 'Final' : 'In play'),
+    h('button', {
+      class: 'icon-btn danger',
+      onclick: () => { if (confirm('Delete this round?')) { store.deleteRound(r.id); rerender(); } },
+    }, '🗑'),
   );
 }
 
@@ -300,24 +304,59 @@ export function renderRoundNew(root) {
 
 function gameConfigForm(game, cfg, players) {
   const rows = [];
+  if (!game.noMode) {
+    rows.push(h('div', { class: 'field-row' },
+      h('label', {}, 'Scoring'),
+      toggle(cfg.mode === 'net', 'Net', 'Gross', (isNet) => { cfg.mode = isNet ? 'net' : 'gross'; }),
+    ));
+  }
+  const potGames = ['stroke', 'stableford'];
   rows.push(h('div', { class: 'field-row' },
-    h('label', {}, 'Scoring'),
-    toggle(cfg.mode === 'net', 'Net', 'Gross', (isNet) => { cfg.mode = isNet ? 'net' : 'gross'; }),
-  ));
-  rows.push(h('div', { class: 'field-row' },
-    h('label', {}, game.id === 'stroke' ? 'Winner takes ($)' : 'Value ($)'),
+    h('label', {}, potGames.includes(game.id) ? 'Winner takes ($)' : 'Value ($)'),
     numberField(cfg, 'value'),
   ));
+  if (game.hasFormat) {
+    rows.push(h('div', { class: 'field-row col' },
+      h('label', {}, 'Each hole'),
+      segmented([
+        { value: 'ball', label: 'Low ball' },
+        { value: 'total', label: 'Low total' },
+        { value: 'both', label: 'Both' },
+      ], cfg.format, (v) => { cfg.format = v; }),
+    ));
+  }
   if (game.id === 'wolf') {
     rows.push(h('div', { class: 'field-row' },
       h('label', {}, 'Lone Wolf ×'),
       numberField(cfg, 'loneMultiplier'),
     ));
   }
+  if (game.birdie) {
+    rows.push(h('div', { class: 'field-row' },
+      h('label', {}, game.birdieLabel || 'Birdies double'),
+      toggle(!!cfg.birdieDouble, 'On', 'Off', (on) => { cfg.birdieDouble = on; }),
+    ));
+  }
   if (game.needsTeams) {
     rows.push(teamPicker(cfg, players));
   }
   return h('div', { class: 'game-config' }, rows);
+}
+
+function segmented(options, current, onChange) {
+  const wrap = h('div', { class: 'segmented' });
+  const btns = [];
+  options.forEach((opt) => {
+    const btn = h('button', { class: `seg ${current === opt.value ? 'on' : ''}` }, opt.label);
+    btn.addEventListener('click', () => {
+      btns.forEach((b) => b.classList.remove('on'));
+      btn.classList.add('on');
+      onChange(opt.value);
+    });
+    btns.push(btn);
+    wrap.append(btn);
+  });
+  return wrap;
 }
 
 function teamPicker(cfg, players) {
@@ -449,6 +488,14 @@ export function renderScorecard(root, params, rerender) {
     const wolfInst = round.games.find((g) => g.gameId === 'wolf');
     if (wolfInst) body.append(wolfControl(round, wolfInst, hole, save));
 
+    // Sixes pairing reminder for the current 6-hole segment.
+    const sixesInst = round.games.find((g) => g.gameId === 'sixes');
+    if (sixesInst) body.append(sixesInfo(round, hole));
+
+    // Bingo Bango Bongo per-hole event picker.
+    const bbbInst = round.games.find((g) => g.gameId === 'bbb');
+    if (bbbInst) body.append(bbbControl(round, bbbInst, hole, save));
+
     drawStandings();
   }
 
@@ -499,6 +546,45 @@ function wolfControl(round, inst, hole, save) {
       onclick: () => { inst.config.picks[hole.number] = { partnerId: null, lone: true }; save(); draw(); },
     }, '🐺 Lone'));
     wrap.append(btns);
+  }
+  draw();
+  return wrap;
+}
+
+function sixesInfo(round, hole) {
+  const [t1, t2] = GAMES.sixes.teamsForHole(round.players, hole.number);
+  const seg = hole.number <= 6 ? 'Holes 1–6' : hole.number <= 12 ? 'Holes 7–12' : 'Holes 13–18';
+  const teamName = (ids) => ids.map((id) => round.players.find((p) => p.id === id)?.name).join(' & ');
+  return h('div', { class: 'sixes-info' },
+    h('div', { class: 'muted small' }, `⛳ Sixes teams · ${seg}`),
+    h('div', { class: 'sixes-teams' },
+      h('span', { class: 'team-pill' }, teamName(t1)),
+      h('span', { class: 'vs' }, 'vs'),
+      h('span', { class: 'team-pill' }, teamName(t2)),
+    ),
+  );
+}
+
+function bbbControl(round, inst, hole, save) {
+  inst.config.picks = inst.config.picks || {};
+  const pick = inst.config.picks[hole.number] || (inst.config.picks[hole.number] = {});
+  const wrap = h('div', { class: 'bbb-control' });
+  function draw() {
+    wrap.innerHTML = '';
+    wrap.append(h('div', { class: 'muted small' }, '🎯 Bingo Bango Bongo — tap who won each'));
+    for (const ev of GAMES.bbb.events) {
+      const row = h('div', { class: 'bbb-row' }, h('span', { class: 'bbb-label' }, ev.label));
+      const chips = h('div', { class: 'wolf-btns' });
+      for (const p of round.players) {
+        const on = pick[ev.key] === p.id;
+        chips.append(h('button', {
+          class: `chip ${on ? 'on' : ''}`,
+          onclick: () => { pick[ev.key] = on ? null : p.id; save(); draw(); },
+        }, p.name));
+      }
+      row.append(chips);
+      wrap.append(row);
+    }
   }
   draw();
   return wrap;

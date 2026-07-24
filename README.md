@@ -12,16 +12,27 @@ server, and it works **offline** on the course (it installs as a PWA).
 - **Players** — save friends with their handicaps and reuse them every round.
 - **Courses** — enter par, stroke index and yardage for each hole once; saved
   for reuse. (Photo-scorecard import is stubbed for a future release.)
-- **Games** — each with a per-game **net / gross** toggle:
+- **Games** — each with a per-game **net / gross** toggle, and a **"birdies
+  double the hole"** option on the per-hole-money games:
   - **Skins** — low score wins the hole; ties carry the pot forward.
   - **Wolf** — 4 players; rotating Wolf picks a partner or goes Lone Wolf for
     triple stakes (pick partner/Lone right on the scorecard each hole).
   - **Banker** — rotating banker plays a match vs everyone each hole.
-  - **666 (Sixes)** — 4 players; partners rotate every 6 holes.
+  - **666 (Sixes)** — 4 players; partners rotate every 6 holes. Choose
+    **low ball**, **low total**, or **both** (2 points/hole). The current
+    6-hole pairing is shown right on the scorecard.
   - **Nassau** — front 9 / back 9 / total, match play, 1v1 or 2v2 best ball.
+  - **Match Play** — a single head-to-head match, most holes won takes it.
+  - **Vegas** — 2 teams; scores form a number (4 & 6 = 46), lower wins,
+    difference × value. Birdies flip the opponent's number.
+  - **Stableford / Quota** — points per hole vs par; most points wins the pot.
+  - **Bingo Bango Bongo** — 3 points a hole (first on, closest, first in),
+    tapped in on the scorecard as you play.
   - **Stroke Play** — lowest total wins the pot.
 - **Live standings** while you play and a **final settlement** that reduces
   everything to the fewest "X pays Y $Z" transactions.
+- **Manage everything** — delete players, courses, and rounds with the 🗑
+  button on each.
 
 ## Running it
 
